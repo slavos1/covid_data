@@ -5,8 +5,12 @@ from datetime import datetime
 from functools import partial
 
 import pandas as pd
+try:
+    from termcolor import colored
+except:
+    colored = lambda text, *args, **kwargs:text
 
-STAR_COUNT = 40
+STAR_COUNT = 72
 UNICODE = {
     "middle_dot": "\u00B7",
     "half_triangular_colon": "\u02D1",
@@ -24,17 +28,17 @@ EMPTY_CHAR = " "
 def get_graph_line(perc, width=STAR_COUNT, c=GRAPH_DOT, none="-", empty_char=EMPTY_CHAR):
     n = int(perc * width)
     graph_line = none if n < 1 else n * c
-    return graph_line + (width - len(graph_line)) * empty_char
+    return colored(graph_line, 'yellow') + (width - len(graph_line)) * empty_char
 
 
 def add_graph(t, column, out_column, width=STAR_COUNT):
     count_min = t[column].min()
     span = t[column].max() - count_min
-    perc = (t[column] - count_min) / span
+    perc = (t[column].fillna(0) - count_min) / span
     t[out_column] = perc.apply(partial(get_graph_line, width=width))
 
 
-def parse(path, last=40):
+def parse(path, last=None, from_date=None):
     def _iter():
         for d in json.load(path.open())["data"]:
             d.update(date=datetime.strptime(d["date"], "%Y-%m-%d"))
@@ -49,7 +53,12 @@ def parse(path, last=40):
     )
     t["daily_delta"] = t.diff()
     t["7day_rolling_avg"] = t.new_daily_cases.rolling(7).mean()
-    recent = t.tail(last).copy()
+    if last:
+        recent = t.tail(last).copy()
+    elif from_date:
+        recent = t[t.index >= from_date]
+    else:
+        recent = t
     add_graph(recent, "new_daily_cases", "daily_graph", width=20)
     add_graph(recent, "7day_rolling_avg", "7day_rolling_avg_graph")
     print(
@@ -63,7 +72,8 @@ def parse(path, last=40):
             ),
         )
     )
+    print(f"min={t.new_daily_cases.min()}, max={t.new_daily_cases.max()}")
 
 
 if __name__ == "__main__":
-    parse(Path("daily_cases.json"))
+    parse(Path("daily_cases.json"), from_date=datetime(2021, 1, 1))
