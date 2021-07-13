@@ -2,10 +2,11 @@
 from pathlib import Path
 import json
 from datetime import datetime
+from functools import partial
 
 import pandas as pd
 
-STAR_COUNT = 72
+STAR_COUNT = 40
 UNICODE = {
     "middle_dot": "\u00B7",
     "half_triangular_colon": "\u02D1",
@@ -16,12 +17,21 @@ UNICODE = {
     "can_middle_dot": "\u1427",
 }
 GRAPH_DOT = UNICODE["bullet"]
-EMPTY_CHAR = UNICODE["can_middle_dot"]  # "."
+# EMPTY_CHAR = UNICODE["can_middle_dot"]  # "."
+EMPTY_CHAR = " "
 
 
-def get_graph_line(perc, c=GRAPH_DOT, none="-", empty_char=EMPTY_CHAR):
-    n = int(perc * STAR_COUNT)
-    return none if n < 1 else n * c + (STAR_COUNT - n) * empty_char
+def get_graph_line(perc, width=STAR_COUNT, c=GRAPH_DOT, none="-", empty_char=EMPTY_CHAR):
+    n = int(perc * width)
+    graph_line = none if n < 1 else n * c
+    return graph_line + (width - len(graph_line)) * empty_char
+
+
+def add_graph(t, column, out_column, width=STAR_COUNT):
+    count_min = t[column].min()
+    span = t[column].max() - count_min
+    perc = (t[column] - count_min) / span
+    t[out_column] = perc.apply(partial(get_graph_line, width=width))
 
 
 def parse(path, last=40):
@@ -38,15 +48,13 @@ def parse(path, last=40):
         .sort_index()
     )
     t["daily_delta"] = t.diff()
+    t["7day_rolling_avg"] = t.new_daily_cases.rolling(7).mean()
     recent = t.tail(last).copy()
-    count_min = recent.new_daily_cases.min()
-    print(count_min, recent.new_daily_cases.max())
-    span = recent.new_daily_cases.max() - count_min
-    recent["perc"] = (recent.new_daily_cases - count_min) / span
-    recent["graph"] = recent.perc.apply(get_graph_line)
+    add_graph(recent, "new_daily_cases", "daily_graph", width=20)
+    add_graph(recent, "7day_rolling_avg", "7day_rolling_avg_graph")
     print(
         recent.to_string(
-            columns="new_daily_cases daily_delta graph".split(),
+            columns="new_daily_cases daily_delta daily_graph 7day_rolling_avg 7day_rolling_avg_graph".split(),
             formatters=dict(
                 # justify left
                 graph=lambda x: f"{{:{STAR_COUNT}s}}".format(x),
