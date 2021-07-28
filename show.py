@@ -3,6 +3,7 @@ from pathlib import Path
 import json
 from datetime import datetime
 from functools import partial
+from os import environ
 
 import pandas as pd
 try:
@@ -10,7 +11,8 @@ try:
 except:
     colored = lambda text, *args, **kwargs:text
 
-STAR_COUNT = 72
+STAR_COUNT = int(environ.get('STAR_COUNT', 72))
+
 UNICODE = {
     "middle_dot": "\u00B7",
     "half_triangular_colon": "\u02D1",
@@ -37,6 +39,8 @@ def add_graph(t, column, out_column, width=STAR_COUNT):
     perc = (t[column].fillna(0) - count_min) / span
     t[out_column] = perc.apply(partial(get_graph_line, width=width))
 
+def thousands_separated(n, plus=False):
+    return "{{:{},d}}".format("+" if plus else "").format(n)
 
 def parse(path, last=None, from_date=None):
     def _iter():
@@ -52,23 +56,26 @@ def parse(path, last=None, from_date=None):
         .sort_index()
     )
     t["daily_delta"] = t.diff()
-    t["7day_rolling_avg"] = t.new_daily_cases.rolling(7).mean()
+    t.daily_delta = t.daily_delta.fillna(0).apply(int)
+    t["seven_day_avg"] = t.new_daily_cases.rolling(7).mean().fillna(0).apply(int)
     if last:
         recent = t.tail(last).copy()
     elif from_date:
         recent = t[t.index >= from_date]
     else:
         recent = t
-    add_graph(recent, "new_daily_cases", "daily_graph", width=20)
-    add_graph(recent, "7day_rolling_avg", "7day_rolling_avg_graph")
+    add_graph(recent, "new_daily_cases", "daily_graph")
+    add_graph(recent, "seven_day_avg", "seven_day_avg_graph")
     print(
         recent.to_string(
-            columns="new_daily_cases daily_delta daily_graph 7day_rolling_avg 7day_rolling_avg_graph".split(),
+            columns="new_daily_cases daily_delta daily_graph seven_day_avg seven_day_avg_graph".split(),
             formatters=dict(
                 # justify left
                 graph=lambda x: f"{{:{STAR_COUNT}s}}".format(x),
                 # show comma as thousands delimiter
-                new_daily_cases=lambda x: "{:,d}".format(x),
+                new_daily_cases=thousands_separated,
+                seven_day_avg=thousands_separated,
+                daily_delta=partial(thousands_separated, plus=True),
             ),
         )
     )

@@ -1,0 +1,54 @@
+= Covid data from PHE
+:toc: left
+:icons: font
+
+A simple (text) graph showing Covid daily cases from 1 Jan 2021.
+  
+Data from https://coronavirus.data.gov.uk/details/cases[Public Health England].
+
+== Setup
+
+[source,bash]
+----
+python3.8 -m venv .venv
+# or python3 -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -r requirements.txt 
+----
+
+== Run
+
+[source,bash]
+----
+$ make
+# or
+$ make fetch show
+# or without data fetch, only making the graph
+$ make show
+...
+           new_daily_cases daily_delta      daily_graph seven_day_avg seven_day_avg_graph
+date                                                                                     
+2021-01-01          53,285      -2,607  •••••••••••            45,701     •••••••••••    
+2021-01-02          57,725      +4,440  ••••••••••••           48,849     ••••••••••••   
+2021-01-03          54,990      -2,735  ••••••••••••           52,347     •••••••••••••  
+2021-01-04          58,784      +3,794  ••••••••••••           54,833     •••••••••••••  
+2021-01-05          60,916      +2,132  •••••••••••••          55,945     •••••••••••••• 
+2021-01-06          62,322      +1,406  •••••••••••••          57,702     •••••••••••••• 
+2021-01-07          52,618      -9,704  •••••••••••            57,234     •••••••••••••• 
+...
+2021-07-21          44,104      -2,454  •••••••••              47,695     •••••••••••    
+2021-07-22          39,906      -4,198  ••••••••               46,460     •••••••••••    
+2021-07-23          36,389      -3,517  •••••••                44,248     ••••••••••     
+2021-07-24          31,795      -4,594  ••••••                 40,980     ••••••••••     
+2021-07-25          29,173      -2,622  ••••••                 38,267     •••••••••      
+2021-07-26          24,950      -4,223  •••••                  36,125     ••••••••       
+2021-07-27          23,511      -1,439  ••••                   32,832     ••••••••       
+2021-07-28          27,734      +4,223  •••••                  30,494     •••••••        
+min=0, max=68053
+----
+
+NOTE: If you installed your virtualenv into a different directory, call `make` with `VENV` env variable pointing to it, like so: `make VENV=my_venv`.
+
+NOTE: You can change the width of the graphs with `STAR_COUNT` make variable, like so: `make STAR_COUNT=15` (this will make the graphs no more than 15 "dots" wide).
+
